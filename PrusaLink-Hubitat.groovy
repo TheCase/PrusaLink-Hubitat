@@ -80,7 +80,7 @@ def parseStatus(data) {
     sendEvent(name: "bedTarget", value: bedTarget)
     sendEvent(name: "nozzleTarget", value: nozzleTarget)
 
-    // Hotend fan and print fan status (numeric, 0-100)
+    // Hotend fan and print fan status
     def hotendFan = data?.printer?.fan_hotend != null ? data.printer.fan_hotend : -1
     def printFan = data?.printer?.fan_print != null ? data.printer.fan_print : -1
     sendEvent(name: "hotendFan", value: hotendFan)
