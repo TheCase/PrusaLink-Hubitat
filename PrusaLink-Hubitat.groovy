@@ -3,13 +3,14 @@ metadata {
         capability "Polling"
         capability "Refresh"
         capability "Sensor"
-        attribute "printerStatus", "string"
-        attribute "jobName", "string"
+        attribute "printerState", "string"
         attribute "progress", "number"
         attribute "bedTemp", "number"
         attribute "nozzleTemp", "number"
-        attribute "hotendStatus", "string"
-        attribute "fanStatus", "string"
+        attribute "bedTarget", "number"
+        attribute "nozzleTarget", "number"
+        attribute "hotendFan", "string"
+        attribute "printFan", "string"
     }
     preferences {
         input("printerIP", "text", title: "PrusaLink Printer IP", required: true)
@@ -49,11 +50,11 @@ def refresh() {
             if (resp.status == 200) {
                 parseStatus(resp.data)
             } else {
-                sendEvent(name: "printerStatus", value: "Error: ${resp.status}")
+                sendEvent(name: "printerState", value: "Error: ${resp.status}")
             }
         }
     } catch (e) {
-        sendEvent(name: "printerStatus", value: "Error: ${e.message}")
+        sendEvent(name: "printerState", value: "Error: ${e.message}")
         log.error "PrusaLink error: ${e.message}"
     }
 }
@@ -63,23 +64,25 @@ def parseStatus(data) {
 
     // Printer state
     def status = data?.printer?.state ?: "unknown"
-    sendEvent(name: "printerStatus", value: status)
+    sendEvent(name: "printerState", value: status)
 
-    // Job info
-    def jobName = data?.job?.file?.display_name ?: data?.job?.file?.name ?: "N/A"
+    // Job progress (jobName removed, not present in status output)
     def progress = data?.job?.progress ?: 0
-    sendEvent(name: "jobName", value: jobName)
     sendEvent(name: "progress", value: progress)
 
     // Temperatures
     def bedTemp = data?.printer?.temp_bed ?: 0
     def nozzleTemp = data?.printer?.temp_nozzle ?: 0
+    def bedTarget = data?.printer?.target_bed ?: 0
+    def nozzleTarget = data?.printer?.target_nozzle ?: 0
     sendEvent(name: "bedTemp", value: bedTemp)
     sendEvent(name: "nozzleTemp", value: nozzleTemp)
+    sendEvent(name: "bedTarget", value: bedTarget)
+    sendEvent(name: "nozzleTarget", value: nozzleTarget)
 
     // Hotend fan and print fan status (numeric, 0-100)
     def hotendFan = data?.printer?.fan_hotend != null ? data.printer.fan_hotend : -1
     def printFan = data?.printer?.fan_print != null ? data.printer.fan_print : -1
-    sendEvent(name: "hotendStatus", value: hotendFan)
-    sendEvent(name: "fanStatus", value: printFan)
+    sendEvent(name: "hotendFan", value: hotendFan)
+    sendEvent(name: "printFan", value: printFan)
 }
