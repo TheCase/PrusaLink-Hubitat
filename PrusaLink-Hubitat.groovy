@@ -1,5 +1,5 @@
 metadata {
-    definition(name: "PrusaLink Printer", namespace: "repulsor", author: "TheCase") {
+    definition(name: "PrusaLink 3D Printer", namespace: "repulsor", author: "TheCase") {
         capability "Polling"
         capability "Refresh"
         capability "Sensor"
@@ -8,6 +8,8 @@ metadata {
         attribute "progress", "number"
         attribute "bedTemp", "number"
         attribute "nozzleTemp", "number"
+        attribute "hotendStatus", "string"
+        attribute "fanStatus", "string"
     }
     preferences {
         input("printerIP", "text", title: "PrusaLink Printer IP", required: true)
@@ -59,15 +61,25 @@ def refresh() {
 def parseStatus(data) {
     log.debug "parseStatus raw data: ${data}"
 
+    // Printer state
     def status = data?.printer?.state ?: "unknown"
     sendEvent(name: "printerStatus", value: status)
 
-    // PrusaLink's response does not include job name or progress in this structure
-    sendEvent(name: "jobName", value: "N/A")
-    sendEvent(name: "progress", value: 0)
+    // Job info
+    def jobName = data?.job?.file?.display_name ?: data?.job?.file?.name ?: "N/A"
+    def progress = data?.job?.progress ?: 0
+    sendEvent(name: "jobName", value: jobName)
+    sendEvent(name: "progress", value: progress)
 
+    // Temperatures
     def bedTemp = data?.printer?.temp_bed ?: 0
     def nozzleTemp = data?.printer?.temp_nozzle ?: 0
     sendEvent(name: "bedTemp", value: bedTemp)
     sendEvent(name: "nozzleTemp", value: nozzleTemp)
+
+    // Hotend fan and print fan status (numeric, 0-100)
+    def hotendFan = data?.printer?.fan_hotend != null ? data.printer.fan_hotend : -1
+    def printFan = data?.printer?.fan_print != null ? data.printer.fan_print : -1
+    sendEvent(name: "hotendStatus", value: hotendFan)
+    sendEvent(name: "fanStatus", value: printFan)
 }
