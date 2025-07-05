@@ -86,3 +86,94 @@ def parseStatus(data) {
     sendEvent(name: "hotendFan", value: hotendFan)
     sendEvent(name: "printFan", value: printFan)
 }
+
+// --- Job Management ---
+
+command "pauseJob"
+command "resumeJob"
+command "stopJob"
+
+
+def pauseJob() {
+    getCurrentJobId { jobId ->
+        if (jobId) {
+            def params = [
+                uri: "http://${settings.printerIP}/api/v1/job/${jobId}/pause",
+                headers: ["X-Api-Key": settings.apiKey],
+                contentType: 'application/json'
+            ]
+            try {
+                httpPut(params) { resp ->
+                    log.debug "Pause job response: ${resp.status}"
+                }
+            } catch (e) {
+                log.error "Pause job error: ${e.message}"
+            }
+        } else {
+            log.warn "No active job to pause."
+        }
+    }
+}
+
+def resumeJob() {
+    getCurrentJobId { jobId ->
+        if (jobId) {
+            def params = [
+                uri: "http://${settings.printerIP}/api/v1/job/${jobId}/resume",
+                headers: ["X-Api-Key": settings.apiKey],
+                contentType: 'application/json'
+            ]
+            try {
+                httpPut(params) { resp ->
+                    log.debug "Resume job response: ${resp.status}"
+                }
+            } catch (e) {
+                log.error "Resume job error: ${e.message}"
+            }
+        } else {
+            log.warn "No active job to resume."
+        }
+    }
+}
+
+def stopJob() {
+    getCurrentJobId { jobId ->
+        if (jobId) {
+            def params = [
+                uri: "http://${settings.printerIP}/api/v1/job/${jobId}",
+                headers: ["X-Api-Key": settings.apiKey],
+                contentType: 'application/json'
+            ]
+            try {
+                httpDelete(params) { resp ->
+                    log.debug "Stop job response: ${resp.status}"
+                }
+            } catch (e) {
+                log.error "Stop job error: ${e.message}"
+            }
+        } else {
+            log.warn "No active job to stop."
+        }
+    }
+}
+
+// Helper to get the current job ID and call a closure with it
+def getCurrentJobId(Closure callback) {
+    def params = [
+        uri: "http://${settings.printerIP}/api/v1/job",
+        headers: ["X-Api-Key": settings.apiKey],
+        contentType: 'application/json'
+    ]
+    try {
+        httpGet(params) { resp ->
+            if (resp.status == 200 && resp.data?.id) {
+                callback(resp.data.id)
+            } else {
+                callback(null)
+            }
+        }
+    } catch (e) {
+        log.error "Get job ID error: ${e.message}"
+        callback(null)
+    }
+}
