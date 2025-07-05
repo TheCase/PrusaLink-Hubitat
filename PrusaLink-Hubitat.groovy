@@ -16,6 +16,7 @@ metadata {
         input("printerIP", "text", title: "PrusaLink Printer IP", required: true)
         input("apiKey", "text", title: "PrusaLink API Key", required: true)
         input("pollInterval", "number", title: "Poll Interval (minutes)", defaultValue: 5)
+        input("deviceDebugEnable", "bool", title: "Enable debug logging", defaultValue: false)
     }
 }
 
@@ -46,7 +47,9 @@ def refresh() {
     ]
     try {
         httpGet(params) { resp ->
-            log.debug "PrusaLink response: ${resp.data}"
+            if (settings?.deviceDebugEnable == true) {
+                log.debug "PrusaLink response: ${resp.data}"
+            }
             if (resp.status == 200) {
                 parseStatus(resp.data)
             } else {
@@ -60,13 +63,15 @@ def refresh() {
 }
 
 def parseStatus(data) {
-    log.debug "parseStatus raw data: ${data}"
+    if (settings?.deviceDebugEnable == true) {
+        log.debug "parseStatus raw data: ${data}"
+    }
 
     // Printer state
     def status = data?.printer?.state ?: "unknown"
     sendEvent(name: "printerState", value: status)
 
-    // Job progress (jobName removed, not present in status output)
+    // Job progress
     def progress = data?.job?.progress ?: 0
     sendEvent(name: "progress", value: progress)
 
@@ -104,7 +109,9 @@ def pauseJob() {
             ]
             try {
                 httpPut(params) { resp ->
-                    log.debug "Pause job response: ${resp.status}"
+                    if (settings?.deviceDebugEnable == true) {
+                        log.debug "Pause job response: ${resp.status}"
+                    }
                 }
             } catch (e) {
                 log.error "Pause job error: ${e.message}"
@@ -125,7 +132,9 @@ def resumeJob() {
             ]
             try {
                 httpPut(params) { resp ->
-                    log.debug "Resume job response: ${resp.status}"
+                    if (settings?.deviceDebugEnable == true) {
+                        log.debug "Resume job response: ${resp.status}"
+                    }
                 }
             } catch (e) {
                 log.error "Resume job error: ${e.message}"
@@ -146,7 +155,9 @@ def stopJob() {
             ]
             try {
                 httpDelete(params) { resp ->
-                    log.debug "Stop job response: ${resp.status}"
+                    if (settings?.deviceDebugEnable == true) {
+                        log.debug "Stop job response: ${resp.status}"
+                    }
                 }
             } catch (e) {
                 log.error "Stop job error: ${e.message}"
@@ -166,6 +177,9 @@ def getCurrentJobId(Closure callback) {
     ]
     try {
         httpGet(params) { resp ->
+            if (settings?.deviceDebugEnable == true) {
+                log.debug "getCurrentJobId response: ${resp.status} ${resp.data}"
+            }
             if (resp.status == 200 && resp.data?.id) {
                 callback(resp.data.id)
             } else {
